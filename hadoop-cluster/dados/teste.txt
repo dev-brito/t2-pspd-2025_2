@@ -1,0 +1,5 @@
+O Hadoop é um framework
+O Hadoop processa Big Data
+Big Data é importante
+MapReduce é poderoso
+O MapReduce usa Hadoop
