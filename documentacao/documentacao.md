@@ -426,7 +426,7 @@ A memória do NodeManager define quanto RAM está disponível para executar cont
 - **Total no cluster:** 4GB × 2 nós = 8GB de RAM disponível para YARN
 
 **Validação:**
-![interfaceWebHadopp](https://exemplo.com/caminho/da/imagem.jpg)
+![interfaceWebHadopp](img\hadoopInterfaceWeb.png)
 ```bash
 Interface Web: http://localhost:8088/cluster/nodes
 Memory Total: 8 GB (8192 MB)
