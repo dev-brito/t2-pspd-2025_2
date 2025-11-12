@@ -1,0 +1,1 @@
+<property><name>mapreduce.map.output.compress</name><value>true</value></property>

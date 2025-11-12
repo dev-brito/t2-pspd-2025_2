@@ -1,0 +1,44 @@
+WARNING: HADOOP_PREFIX has been replaced by HADOOP_HOME. Using value of HADOOP_PREFIX.
+Connecting to namenode via http://namenode:9870/fsck?ugi=root&files=1&blocks=1&locations=1&path=%2Fuser%2Fhadoop%2Finput%2Fteste_grande.txt
+FSCK started by root (auth:SIMPLE) from /172.18.0.2 for path /user/hadoop/input/teste_grande.txt at Wed Nov 12 00:08:48 UTC 2025
+/user/hadoop/input/teste_grande.txt 1460000 bytes, replicated: replication=3, 1 block(s):  Under replicated BP-958454527-172.18.0.2-1762744116974:blk_1073741828_1004. Target Replicas is 3 but found 2 live replica(s), 0 decommissioned replica(s), 0 decommissioning replica(s).
+ Replica placement policy is violated for BP-958454527-172.18.0.2-1762744116974:blk_1073741828_1004. The block has 3 replicas. But it only has 2 upgrade domains [172.18.0.4:9866, 172.18.0.3:9866].
+0. BP-958454527-172.18.0.2-1762744116974:blk_1073741828_1004 len=1460000 Live_repl=2  [DatanodeInfoWithStorage[172.18.0.3:9866,DS-10f04681-573a-45dc-8d5d-a48b869e4e7d,DISK], DatanodeInfoWithStorage[172.18.0.4:9866,DS-190ad8b8-b209-4f80-9d3d-8848bc3e07ae,DISK]]
+
+
+Status: HEALTHY
+ Number of data-nodes:	2
+ Number of racks:		1
+ Total dirs:			0
+ Total symlinks:		0
+
+Replicated Blocks:
+ Total size:	1460000 B
+ Total files:	1
+ Total blocks (validated):	1 (avg. block size 1460000 B)
+ Minimally replicated blocks:	1 (100.0 %)
+ Over-replicated blocks:	0 (0.0 %)
+ Under-replicated blocks:	1 (100.0 %)
+ Mis-replicated blocks:		1 (100.0 %)
+ Default replication factor:	3
+ Average block replication:	2.0
+ Missing blocks:		0
+ Corrupt blocks:		0
+ Missing replicas:		1 (33.333332 %)
+
+Erasure Coded Block Groups:
+ Total size:	0 B
+ Total files:	0
+ Total block groups (validated):	0
+ Minimally erasure-coded block groups:	0
+ Over-erasure-coded block groups:	0
+ Under-erasure-coded block groups:	0
+ Unsatisfactory placement block groups:	0
+ Average block group size:	0.0
+ Missing block groups:		0
+ Corrupt block groups:		0
+ Missing internal blocks:	0
+FSCK ended at Wed Nov 12 00:08:48 UTC 2025 in 2 milliseconds
+
+
+The filesystem under path '/user/hadoop/input/teste_grande.txt' is HEALTHY

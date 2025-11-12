@@ -1,0 +1,3 @@
+CONTAINER ID   NAME           CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O   PIDS
+78796ec0fde5   nodemanager1   0.03%     1.172MiB / 7.453GiB   0.02%     18.2kB / 3.46kB   0B / 0B     2
+594ee6b88b1f   nodemanager2   0.03%     1.152MiB / 7.453GiB   0.02%     16.9kB / 4.25kB   0B / 0B     2
