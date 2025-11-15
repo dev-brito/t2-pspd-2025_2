@@ -364,7 +364,7 @@ org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler
 
 **Mudança realizada:**
 
-```yaml
+```bash
 # docker-compose.yml - Antes:
 - YARN_CONF_yarn_nodemanager_resource_cpu__vcores=2
 
@@ -424,7 +424,7 @@ RUNNING 3da647d4bbbe:8042
 
 **Mudança realizada:**
 
-```yaml
+```bash
 # docker-compose.yml - Antes:
 - YARN_CONF_yarn_nodemanager_resource_memory__mb=2048
 
@@ -446,7 +446,7 @@ A memória do NodeManager define quanto RAM está disponível para executar cont
 
 **Validação:**
 
-<img src="img/hadoopInterfaceWeb.png" alt="interfaceWebHadoop" width="900">
+![Interface Web Hadoop](img/hadoopInterfaceWeb.png)
 
 ```bash
 Interface Web: http://localhost:8088/cluster/nodes
@@ -541,10 +541,11 @@ Reduzir o footprint de memória de cada tarefa permite mais tarefas simultâneas
 
 ```bash
 # Antes:
-YARN_CONF_yarn_nodemanager_disk___health___checker_max___disk___utilization___per___disk___percentage=98.5
-
+YARN_CONF_yarn_nodemanager_disk___health___checker_max___disk
+___utilization___per___disk___percentage=98.5
 # Depois:
-YARN_CONF_yarn_nodemanager_disk___health___checker_max___disk___utilization___per___disk___percentage=85.0
+YARN_CONF_yarn_nodemanager_disk___health___checker_max___disk
+___utilization___per___disk___percentage=85.0
 ```
 
 **Justificativa:**
@@ -588,7 +589,7 @@ Conclusão: Ainda há ~994GB disponíveis. O threshold de 85% (856GB) está long
 
 **Mudança realizada:**
 
-```yaml
+```bash
 # docker-compose.yml - Antes:
 - HDFS_CONF_dfs_replication=2
 
@@ -800,6 +801,805 @@ Para implementar preempção com FairScheduler, seria necessário usar o plugin 
 ---
 
 ## Teste de Tolerância a faltas e performance de aplicações Hadoop
+
+Para avaliar a performance e a tolerância a faltas do cluster, conforme solicitado, a aplicação WordCount foi executada em diferentes cenários. O cluster, gerenciado pelo docker-compose.yml, é composto por um NameNode, um ResourceManager e dois nós escravos (DataNode/NodeManager). A aplicação processou um arquivo de texto (big-file.txt) de aproximadamente 8.16 GB, um volume suficiente para exigir um tempo de execução razoável.
+
+### Teste 1: Baseline
+
+O primeiro experimento serviu como linha de base (baseline) para performance. Com todos os nós do cluster ativos e saudáveis, o job foi concluído com sucesso em 5 minutos e 1 segundo. 
+
+![Resultados do Teste 1](img/resultado-teste1.png)
+
+```bash
+# Resultados do Teste 1
+
+INFO mapreduce.Job: Counters: 54
+
+    File System Counters
+
+        FILE: Number of bytes read=168235044
+
+        FILE: Number of bytes written=203226288
+
+        FILE: Number of read operations=0
+
+        FILE: Number of large read operations=0
+
+        FILE: Number of write operations=0
+
+        HDFS: Number of bytes read=8163438836
+
+        HDFS: Number of bytes written=1007051
+
+        HDFS: Number of read operations=188
+
+        HDFS: Number of large read operations=0
+
+        HDFS: Number of write operations=2
+
+    Job Counters 
+
+        Killed map tasks=1
+
+        Launched map tasks=62
+
+        Launched reduce tasks=1
+
+        Rack-local map tasks=62
+
+        Total time spent by all maps in occupied slots (ms)=1311159
+
+        Total time spent by all reduces in occupied slots (ms)=238210
+
+        Total time spent by all map tasks (ms)=1311159
+
+        Total time spent by all reduce tasks (ms)=238210
+
+        Total vcore-milliseconds taken by all map tasks=1311159
+
+        Total vcore-milliseconds taken by all reduce tasks=238210
+
+        Total megabyte-milliseconds taken by all map tasks=1342626816
+
+        Total megabyte-milliseconds taken by all reduce tasks=243927040
+
+    Map-Reduce Framework
+
+        Map input records=294588001
+
+        Map output records=1449750001
+
+        Map output bytes=13868899505
+
+        Map output materialized bytes=21351124
+
+        Input split bytes=7076
+
+        Combine input records=1484277246
+
+        Combine output records=38894480
+
+        Reduce input groups=71595
+
+        Reduce shuffle bytes=21351124
+
+        Reduce input records=4367235
+
+        Reduce output records=71595
+
+        Spilled Records=43261715
+
+        Shuffled Maps =61
+
+        Failed Shuffles=0
+
+        Merged Map outputs=61
+
+        GC time elapsed (ms)=8093
+
+        CPU time spent (ms)=1549570
+
+        Physical memory (bytes) snapshot=22872604672
+
+        Virtual memory (bytes) snapshot=134479392768
+
+        Total committed heap usage (bytes)=20654850048
+
+        Peak Map Physical memory (bytes)=385839104
+
+        Peak Map Virtual memory (bytes)=2179530752
+
+        Peak Reduce Physical memory (bytes)=300220416
+
+        Peak Reduce Virtual memory (bytes)=2169344000
+
+    Shuffle Errors
+
+        BAD_ID=0
+
+        CONNECTION=0
+
+        IO_ERROR=0
+
+        WRONG_LENGTH=0
+
+        WRONG_MAP=0
+
+        WRONG_REDUCE=0
+
+    File Input Format Counters 
+
+        Bytes Read=8163431760
+
+    File Output Format Counters 
+
+        Bytes Written=1007051 
+
+```
+
+### Teste 2: Falha pré-existente
+
+O segundo cenário testou a resiliência a uma falha pré-existente. Antes de submeter o job, os contêineres datanode2 e nodemanager2 foram parados, reduzindo o cluster a apenas um nó escravo funcional. O HDFS demonstrou resiliência imediata: os logs de submissão do job registraram múltiplos erros de java.net.NoRouteToHostException e o sistema automaticamente excluiu o nó ausente (Excluding datanode), permitindo que a aplicação iniciasse. Embora concluído com sucesso, o tempo de execução aumentou para 15 minutos e 53 segundos, um aumento de 216% em relação à baseline. Isso confirma que o desempenho da aplicação escala com os recursos disponíveis e que o YARN, embora funcional, teve sua performance severamente degradada pela falta de paralelismo.
+
+![Resultados do Teste 2](img/resultado-teste2.png)
+
+```bash
+# Resultados do Teste 2
+
+ brito@brito:~/Documenti/unb/pspd/t2-pspd-2025_2/hadoop-cluster$ docker exec -it namenode hadoop jar /tmp/wc.jar WordCount   /user/hadoop/input/big-file.txt   /user/hadoop/output
+
+WARNING: HADOOP_PREFIX has been replaced by HADOOP_HOME. Using value of HADOOP_PREFIX.
+
+2025-11-14 22:17:17,995 INFO client.RMProxy: Connecting to ResourceManager at resourcemanager/172.19.0.5:8032
+
+2025-11-14 22:17:18,077 INFO client.AHSProxy: Connecting to Application History server at historyserver/172.19.0.8:10200
+
+2025-11-14 22:17:18,158 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+
+2025-11-14 22:17:18,165 INFO mapreduce.JobResourceUploader: Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/root/.staging/job_1763157765121_0002
+
+2025-11-14 22:17:40,745 INFO hdfs.DataStreamer: Exception in createBlockOutputStream blk_1073741908_1084
+
+java.net.NoRouteToHostException: No route to host
+
+    at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+
+    at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:714)
+
+    at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+
+    at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:531)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createSocketForPipeline(DataStreamer.java:253)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createBlockOutputStream(DataStreamer.java:1725)
+
+    at org.apache.hadoop.hdfs.DataStreamer.nextBlockOutputStream(DataStreamer.java:1679)
+
+    at org.apache.hadoop.hdfs.DataStreamer.run(DataStreamer.java:716)
+
+2025-11-14 22:17:40,748 WARN hdfs.DataStreamer: Abandoning BP-1264569574-172.19.0.2-1763157754245:blk_1073741908_1084
+
+2025-11-14 22:17:40,753 WARN hdfs.DataStreamer: Excluding datanode DatanodeInfoWithStorage[172.19.0.4:9866,DS-85512248-2452-4cc8-ba87-46d71d68f868,DISK]
+
+2025-11-14 22:17:40,764 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:17:40,812 INFO input.FileInputFormat: Total input files to process : 1
+
+2025-11-14 22:17:43,945 INFO hdfs.DataStreamer: Exception in createBlockOutputStream blk_1073741910_1086
+
+java.net.NoRouteToHostException: No route to host
+
+    at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+
+    at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:714)
+
+    at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+
+    at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:531)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createSocketForPipeline(DataStreamer.java:253)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createBlockOutputStream(DataStreamer.java:1725)
+
+    at org.apache.hadoop.hdfs.DataStreamer.nextBlockOutputStream(DataStreamer.java:1679)
+
+    at org.apache.hadoop.hdfs.DataStreamer.run(DataStreamer.java:716)
+
+2025-11-14 22:17:43,945 WARN hdfs.DataStreamer: Abandoning BP-1264569574-172.19.0.2-1763157754245:blk_1073741910_1086
+
+2025-11-14 22:17:43,949 WARN hdfs.DataStreamer: Excluding datanode DatanodeInfoWithStorage[172.19.0.4:9866,DS-85512248-2452-4cc8-ba87-46d71d68f868,DISK]
+
+2025-11-14 22:17:43,951 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:17:47,017 INFO hdfs.DataStreamer: Exception in createBlockOutputStream blk_1073741912_1088
+
+java.net.NoRouteToHostException: No route to host
+
+    at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+
+    at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:714)
+
+    at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+
+    at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:531)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createSocketForPipeline(DataStreamer.java:253)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createBlockOutputStream(DataStreamer.java:1725)
+
+    at org.apache.hadoop.hdfs.DataStreamer.nextBlockOutputStream(DataStreamer.java:1679)
+
+    at org.apache.hadoop.hdfs.DataStreamer.run(DataStreamer.java:716)
+
+2025-11-14 22:17:47,017 WARN hdfs.DataStreamer: Abandoning BP-1264569574-172.19.0.2-1763157754245:blk_1073741912_1088
+
+2025-11-14 22:17:47,021 WARN hdfs.DataStreamer: Excluding datanode DatanodeInfoWithStorage[172.19.0.4:9866,DS-85512248-2452-4cc8-ba87-46d71d68f868,DISK]
+
+2025-11-14 22:17:47,023 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:17:47,431 INFO mapreduce.JobSubmitter: number of splits:61
+
+2025-11-14 22:17:50,538 INFO hdfs.DataStreamer: Exception in createBlockOutputStream blk_1073741914_1090
+
+java.net.NoRouteToHostException: No route to host
+
+    at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+
+    at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:714)
+
+    at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+
+    at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:531)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createSocketForPipeline(DataStreamer.java:253)
+
+    at org.apache.hadoop.hdfs.DataStreamer.createBlockOutputStream(DataStreamer.java:1725)
+
+    at org.apache.hadoop.hdfs.DataStreamer.nextBlockOutputStream(DataStreamer.java:1679)
+
+    at org.apache.hadoop.hdfs.DataStreamer.run(DataStreamer.java:716)
+
+2025-11-14 22:17:50,538 WARN hdfs.DataStreamer: Abandoning BP-1264569574-172.19.0.2-1763157754245:blk_1073741914_1090
+
+2025-11-14 22:17:50,544 WARN hdfs.DataStreamer: Excluding datanode DatanodeInfoWithStorage[172.19.0.4:9866,DS-85512248-2452-4cc8-ba87-46d71d68f868,DISK]
+
+2025-11-14 22:17:50,546 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:17:50,550 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1763157765121_0002
+
+2025-11-14 22:17:50,550 INFO mapreduce.JobSubmitter: Executing with tokens: []
+
+2025-11-14 22:17:50,631 INFO conf.Configuration: resource-types.xml not found
+
+2025-11-14 22:17:50,631 INFO resource.ResourceUtils: Unable to find 'resource-types.xml'.
+
+2025-11-14 22:17:52,484 INFO impl.YarnClientImpl: Application submission is not finished, submitted application application_1763157765121_0002 is still in NEW_SAVING
+
+2025-11-14 22:17:54,316 INFO impl.YarnClientImpl: Submitted application application_1763157765121_0002
+
+2025-11-14 22:17:54,332 INFO mapreduce.Job: The url to track the job: http://resourcemanager:8088/proxy/application_1763157765121_0002/
+
+2025-11-14 22:17:54,333 INFO mapreduce.Job: Running job: job_1763157765121_0002
+
+^R
+
+2025-11-14 22:18:00,381 INFO mapreduce.Job: Job job_1763157765121_0002 running in uber mode : false
+
+2025-11-14 22:18:00,382 INFO mapreduce.Job:  map 0% reduce 0%
+
+2025-11-14 22:18:19,448 INFO mapreduce.Job:  map 1% reduce 0%
+
+2025-11-14 22:18:26,473 INFO mapreduce.Job:  map 2% reduce 0%
+
+2025-11-14 22:18:35,501 INFO mapreduce.Job:  map 3% reduce 0%
+
+2025-11-14 22:18:42,521 INFO mapreduce.Job:  map 4% reduce 0%
+
+2025-11-14 22:18:49,542 INFO mapreduce.Job:  map 5% reduce 0%
+
+2025-11-14 22:18:51,548 INFO mapreduce.Job:  map 6% reduce 0%
+
+2025-11-14 22:18:58,567 INFO mapreduce.Job:  map 7% reduce 0%
+
+# ...
+
+2025-11-14 22:33:46,218 INFO mapreduce.Job: Job job_1763157765121_0002 completed successfully
+
+2025-11-14 22:33:46,261 INFO mapreduce.Job: Counters: 55
+
+    File System Counters
+
+        FILE: Number of bytes read=168218439
+
+        FILE: Number of bytes written=203209684
+
+        FILE: Number of read operations=0
+
+        FILE: Number of large read operations=0
+
+        FILE: Number of write operations=0
+
+        HDFS: Number of bytes read=8163438836
+
+        HDFS: Number of bytes written=1007051
+
+        HDFS: Number of read operations=188
+
+        HDFS: Number of large read operations=0
+
+        HDFS: Number of write operations=2
+
+    Job Counters 
+
+        Killed map tasks=1
+
+        Killed reduce tasks=22
+
+        Launched map tasks=61
+
+        Launched reduce tasks=23
+
+        Rack-local map tasks=61
+
+        Total time spent by all maps in occupied slots (ms)=1099191
+
+        Total time spent by all reduces in occupied slots (ms)=591638
+
+        Total time spent by all map tasks (ms)=1099191
+
+        Total time spent by all reduce tasks (ms)=591638
+
+        Total vcore-milliseconds taken by all map tasks=1099191
+
+        Total vcore-milliseconds taken by all reduce tasks=591638
+
+        Total megabyte-milliseconds taken by all map tasks=1125571584
+
+        Total megabyte-milliseconds taken by all reduce tasks=605837312
+
+    Map-Reduce Framework
+
+        Map input records=294588001
+
+        Map output records=1449750001
+
+        Map output bytes=13868899505
+
+        Map output materialized bytes=21351124
+
+        Input split bytes=7076
+
+        Combine input records=1484277246
+
+        Combine output records=38894480
+
+        Reduce input groups=71595
+
+        Reduce shuffle bytes=21351124
+
+        Reduce input records=4367235
+
+        Reduce output records=71595
+
+        Spilled Records=43261715
+
+        Shuffled Maps =61
+
+        Failed Shuffles=0
+
+        Merged Map outputs=61
+
+        GC time elapsed (ms)=4983
+
+        CPU time spent (ms)=1214070
+
+        Physical memory (bytes) snapshot=22941581312
+
+        Virtual memory (bytes) snapshot=134573690880
+
+        Total committed heap usage (bytes)=20679491584
+
+        Peak Map Physical memory (bytes)=384856064
+
+        Peak Map Virtual memory (bytes)=2183704576
+
+        Peak Reduce Physical memory (bytes)=317939712
+
+        Peak Reduce Virtual memory (bytes)=2172813312
+
+    Shuffle Errors
+
+        BAD_ID=0
+
+        CONNECTION=0
+
+        IO_ERROR=0
+
+        WRONG_LENGTH=0
+
+        WRONG_MAP=0
+
+        WRONG_REDUCE=0
+
+    File Input Format Counters 
+
+        Bytes Read=8163431760
+
+    File Output Format Counters 
+
+        Bytes Written=1007051 
+
+```
+
+### Teste 3: Falha em tempo real
+
+O terceiro teste simulou o cenário mais crítico: uma falha em tempo real. O job foi iniciado com o cluster completo, mas um dos nós escravos (datanode2 e nodemanager2) foi parado durante a fase de map. A interface do YARN, capturada durante a execução, confirmou a detecção da falha, exibindo "Lost Nodes: 1". Os logs da aplicação são explícitos: a fase de reduce falhou (Task Id ... FAILED) ao tentar buscar os dados do nó perdido (etapa shuffle), resultando em um Shuffle$ShuffleError e Exceeded MAX_FAILED_UNIQUE_FETCHES.
+
+Neste ponto, o ApplicationMaster do YARN demonstrou sua principal função: ele identificou as tarefas map cujos resultados foram perdidos (Failed map tasks=11) e as re-agendou no nó saudável. A aplicação não foi abortada e, após re-executar o trabalho perdido, concluiu com sucesso em 11 minutos e 2 segundos. O tempo foi maior que o baseline (5 min) devido à re-execução e à finalização do processamento com metade dos recursos, mas significativamente menor que o Teste 2 (16 min), pois se beneficiou do paralelismo durante a primeira metade da execução.
+
+![Resultados do Teste 3](img/resultado-teste3.png)
+
+```bash
+# Resultados do Teste 3
+
+ 2025-11-14 22:44:52,233 INFO client.RMProxy: Connecting to ResourceManager at resourcemanager/172.19.0.5:8032
+
+2025-11-14 22:44:52,313 INFO client.AHSProxy: Connecting to Application History server at historyserver/172.19.0.8:10200
+
+2025-11-14 22:44:52,387 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+
+2025-11-14 22:44:52,396 INFO mapreduce.JobResourceUploader: Disabling Erasure Coding for path: /tmp/hadoop-yarn/staging/root/.staging/job_1763157765121_0003
+
+2025-11-14 22:44:52,440 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:44:52,499 INFO input.FileInputFormat: Total input files to process : 1
+
+2025-11-14 22:44:52,522 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:44:52,541 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:44:52,547 INFO mapreduce.JobSubmitter: number of splits:61
+
+2025-11-14 22:44:52,593 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+
+2025-11-14 22:44:52,602 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1763157765121_0003
+
+2025-11-14 22:44:52,602 INFO mapreduce.JobSubmitter: Executing with tokens: []
+
+2025-11-14 22:44:52,680 INFO conf.Configuration: resource-types.xml not found
+
+2025-11-14 22:44:52,680 INFO resource.ResourceUtils: Unable to find 'resource-types.xml'.
+
+2025-11-14 22:44:52,918 INFO impl.YarnClientImpl: Submitted application application_1763157765121_0003
+
+2025-11-14 22:44:52,935 INFO mapreduce.Job: The url to track the job: http://resourcemanager:8088/proxy/application_1763157765121_0003/
+
+2025-11-14 22:44:52,936 INFO mapreduce.Job: Running job: job_1763157765121_0003
+
+2025-11-14 22:44:55,973 INFO mapreduce.Job: Job job_1763157765121_0003 running in uber mode : false
+
+2025-11-14 22:44:55,974 INFO mapreduce.Job:  map 0% reduce 0%
+
+2025-11-14 22:45:12,047 INFO mapreduce.Job:  map 1% reduce 0%
+
+2025-11-14 22:45:14,056 INFO mapreduce.Job:  map 2% reduce 0%
+
+2025-11-14 22:45:15,059 INFO mapreduce.Job:  map 3% reduce 0%
+
+2025-11-14 22:45:19,074 INFO mapreduce.Job:  map 4% reduce 0%
+
+2025-11-14 22:45:20,080 INFO mapreduce.Job:  map 5% reduce 0%
+
+2025-11-14 22:45:23,097 INFO mapreduce.Job:  map 7% reduce 0%
+
+2025-11-14 22:45:24,101 INFO mapreduce.Job:  map 8% reduce 0%
+
+2025-11-14 22:45:29,121 INFO mapreduce.Job:  map 10% reduce 0%
+
+2025-11-14 22:45:39,156 INFO mapreduce.Job:  map 11% reduce 0%
+
+2025-11-14 22:45:41,162 INFO mapreduce.Job:  map 12% reduce 0%
+
+2025-11-14 22:45:44,170 INFO mapreduce.Job:  map 13% reduce 0%
+
+2025-11-14 22:45:45,172 INFO mapreduce.Job:  map 14% reduce 0%
+
+2025-11-14 22:45:47,178 INFO mapreduce.Job:  map 15% reduce 0%
+
+2025-11-14 22:45:49,184 INFO mapreduce.Job:  map 16% reduce 0%
+
+2025-11-14 22:45:50,186 INFO mapreduce.Job:  map 17% reduce 0%
+
+2025-11-14 22:45:54,197 INFO mapreduce.Job:  map 18% reduce 0%
+
+2025-11-14 22:46:11,244 INFO mapreduce.Job:  map 18% reduce 2%
+
+2025-11-14 22:47:20,400 INFO mapreduce.Job:  map 19% reduce 2%
+
+2025-11-14 22:47:28,417 INFO mapreduce.Job:  map 20% reduce 2%
+
+2025-11-14 22:47:34,429 INFO mapreduce.Job:  map 20% reduce 3%
+
+2025-11-14 22:47:41,444 INFO mapreduce.Job:  map 21% reduce 3%
+
+2025-11-14 22:47:44,452 INFO mapreduce.Job:  map 22% reduce 3%
+
+2025-11-14 22:47:48,462 INFO mapreduce.Job:  map 23% reduce 3%
+
+2025-11-14 22:47:49,464 INFO mapreduce.Job:  map 24% reduce 3%
+
+2025-11-14 22:47:50,467 INFO mapreduce.Job:  map 25% reduce 3%
+
+2025-11-14 22:47:51,469 INFO mapreduce.Job:  map 26% reduce 3%
+
+2025-11-14 22:47:54,477 INFO mapreduce.Job:  map 27% reduce 3%
+
+2025-11-14 22:47:57,484 INFO mapreduce.Job:  map 28% reduce 3%
+
+2025-11-14 22:48:06,504 INFO mapreduce.Job:  map 29% reduce 3%
+
+2025-11-14 22:48:07,506 INFO mapreduce.Job:  map 30% reduce 3%
+
+2025-11-14 22:48:10,514 INFO mapreduce.Job: Task Id : attempt_1763157765121_0003_r_000000_0, Status : FAILED
+
+Error: org.apache.hadoop.mapreduce.task.reduce.Shuffle$ShuffleError: error in shuffle in fetcher#5
+
+    at org.apache.hadoop.mapreduce.task.reduce.Shuffle.run(Shuffle.java:134)
+
+    at org.apache.hadoop.mapred.ReduceTask.run(ReduceTask.java:377)
+
+    at org.apache.hadoop.mapred.YarnChild$2.run(YarnChild.java:174)
+
+    at java.security.AccessController.doPrivileged(Native Method)
+
+    at javax.security.auth.Subject.doAs(Subject.java:422)
+
+    at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1729)
+
+    at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:168)
+
+Caused by: java.io.IOException: Exceeded MAX_FAILED_UNIQUE_FETCHES; bailing-out.
+
+    at org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl.checkReducerHealth(ShuffleSchedulerImpl.java:396)
+
+    at org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl.copyFailed(ShuffleSchedulerImpl.java:311)
+
+    at org.apache.hadoop.mapreduce.task.reduce.Fetcher.copyFromHost(Fetcher.java:361)
+
+    at org.apache.hadoop.mapreduce.task.reduce.Fetcher.run(Fetcher.java:198)
+
+
+# ...
+
+2025-11-14 22:49:34,769 INFO mapreduce.Job: Task Id : attempt_1763157765121_0003_m_000013_0, Status : FAILED
+
+Container launch failed for container_1763157765121_0003_01_000015 : java.net.ConnectException: Call From eb8984aa1cb2/172.19.0.7 to b8f29f387a3d:42035 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused
+
+    at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+
+    at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+
+    at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+
+    at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+
+    at org.apache.hadoop.net.NetUtils.wrapWithMessage(NetUtils.java:831)
+
+    at org.apache.hadoop.net.NetUtils.wrapException(NetUtils.java:755)
+
+    at org.apache.hadoop.ipc.Client.getRpcResponse(Client.java:1549)
+
+    at org.apache.hadoop.ipc.Client.call(Client.java:1491)
+
+    at org.apache.hadoop.ipc.Client.call(Client.java:1388)
+
+    at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:233)
+
+    at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:118)
+
+    at com.sun.proxy.$Proxy85.startContainers(Unknown Source)
+
+    at org.apache.hadoop.yarn.api.impl.pb.client.ContainerManagementProtocolPBClientImpl.startContainers(ContainerManagementProtocolPBClientImpl.java:128)
+
+    at sun.reflect.GeneratedMethodAccessor16.invoke(Unknown Source)
+
+    at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+
+    at java.lang.reflect.Method.invoke(Method.java:498)
+
+    at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:422)
+
+    at org.apache.hadoop.io.retry.RetryInvocationHandler$Call.invokeMethod(RetryInvocationHandler.java:165)
+
+    at org.apache.hadoop.io.retry.RetryInvocationHandler$Call.invoke(RetryInvocationHandler.java:157)
+
+    at org.apache.hadoop.io.retry.RetryInvocationHandler$Call.invokeOnce(RetryInvocationHandler.java:95)
+
+    at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:359)
+
+    at com.sun.proxy.$Proxy86.startContainers(Unknown Source)
+
+    at org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl$Container.launch(ContainerLauncherImpl.java:160)
+
+    at org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl$EventProcessor.run(ContainerLauncherImpl.java:394)
+
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+
+    at java.lang.Thread.run(Thread.java:748)
+
+Caused by: java.net.ConnectException: Connection refused
+
+    at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+
+    at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:714)
+
+    at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+
+    at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:531)
+
+    at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:700)
+
+    at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:804)
+
+    at org.apache.hadoop.ipc.Client$Connection.access$3800(Client.java:421)
+
+    at org.apache.hadoop.ipc.Client.getConnection(Client.java:1606)
+
+    at org.apache.hadoop.ipc.Client.call(Client.java:1435)
+
+    ... 19 more
+
+
+2025-11-14 22:49:37,778 INFO mapreduce.Job:  map 45% reduce 13%
+
+2025-11-14 22:49:38,780 INFO mapreduce.Job:  map 46% reduce 13%
+
+2025-11-14 22:49:40,784 INFO mapreduce.Job:  map 46% reduce 14%
+
+2025-11-14 22:49:41,785 INFO mapreduce.Job:  map 48% reduce 14%
+
+2025-11-14 22:49:46,793 INFO mapreduce.Job:  map 48% reduce 15%
+
+2025-11-14 22:49:48,797 INFO mapreduce.Job:  map 49% reduce 15%
+
+#...
+
+2025-11-14 22:55:54,371 INFO mapreduce.Job: Job job_1763157765121_0003 completed successfully
+
+2025-11-14 22:55:54,415 INFO mapreduce.Job: Counters: 56
+
+    File System Counters
+
+        FILE: Number of bytes read=168212024
+
+        FILE: Number of bytes written=203203268
+
+        FILE: Number of read operations=0
+
+        FILE: Number of large read operations=0
+
+        FILE: Number of write operations=0
+
+        HDFS: Number of bytes read=8163438836
+
+        HDFS: Number of bytes written=1007051
+
+        HDFS: Number of read operations=188
+
+        HDFS: Number of large read operations=0
+
+        HDFS: Number of write operations=2
+
+    Job Counters 
+
+        Failed map tasks=11
+
+        Failed reduce tasks=3
+
+        Launched map tasks=75
+
+        Launched reduce tasks=4
+
+        Other local map tasks=11
+
+        Rack-local map tasks=64
+
+        Total time spent by all maps in occupied slots (ms)=1617141
+
+        Total time spent by all reduces in occupied slots (ms)=377725
+
+        Total time spent by all map tasks (ms)=1617141
+
+        Total time spent by all reduce tasks (ms)=377725
+
+        Total vcore-milliseconds taken by all map tasks=1617141
+
+        Total vcore-milliseconds taken by all reduce tasks=377725
+
+        Total megabyte-milliseconds taken by all map tasks=1655952384
+
+        Total megabyte-milliseconds taken by all reduce tasks=386790400
+
+    Map-Reduce Framework
+
+        Map input records=294588001
+
+        Map output records=1449750001
+
+        Map output bytes=13868899505
+
+        Map output materialized bytes=21351124
+
+        Input split bytes=7076
+
+        Combine input records=1484277246
+
+        Combine output records=38894480
+
+        Reduce input groups=71595
+
+        Reduce shuffle bytes=21351124
+
+        Reduce input records=4367235
+
+        Reduce output records=71595
+
+        Spilled Records=43261715
+
+        Shuffled Maps =61
+
+        Failed Shuffles=0
+
+        Merged Map outputs=61
+
+        GC time elapsed (ms)=8402
+
+        CPU time spent (ms)=1553900
+
+        Physical memory (bytes) snapshot=23018340352
+
+        Virtual memory (bytes) snapshot=134510182400
+
+        Total committed heap usage (bytes)=20645937152
+
+        Peak Map Physical memory (bytes)=480870400
+
+        Peak Map Virtual memory (bytes)=2177777664
+
+        Peak Reduce Physical memory (bytes)=236560384
+
+        Peak Reduce Virtual memory (bytes)=2169274368
+
+    Shuffle Errors
+
+        BAD_ID=0
+
+        CONNECTION=0
+
+        IO_ERROR=0
+
+        WRONG_LENGTH=0
+
+        WRONG_MAP=0
+
+        WRONG_REDUCE=0
+
+    File Input Format Counters 
+
+        Bytes Read=8163431760
+
+    File Output Format Counters 
+
+        Bytes Written=1007051
+```
+
+### Conclusão
+
+Em suma, os experimentos validam o design do Hadoop: o acréscimo de nós melhora o desempenho (Teste 1 vs. Teste 2) , e o sistema é altamente tolerante a faltas, seja antes da execução (Teste 2) ou durante o processamento (Teste 3), garantindo a "saúde da aplicação" ao custo de performance.
+
 
 # Conhecendo o Apache Spark
 
