@@ -19,6 +19,11 @@ Este documento apresenta o desenvolvimento e a documentação do Laboratório 2 
 
 O trabalho foi estruturado em duas grandes etapas. Na primeira etapa, foi solicitada a implementação de um cluster Hadoop funcional, incluindo a configuração de um sistema de arquivos distribuído (HDFS), o gerenciamento de recursos com YARN, e a execução de aplicações MapReduce. Além disso, foi necessário realizar testes de tolerância a falhas e otimização de performance, explorando diferentes configurações de alocação de recursos, escalonamento de tarefas e distribuição de blocos. Na segunda etapa, o foco foi direcionado ao Apache Spark, onde foi desenvolvida uma aplicação de streaming em tempo real integrada com Apache Kafka, ElasticSearch e Kibana, realizando análise de sentimentos de dados coletados do Reddit.
 
+[Clique aqui para acessar o vídeo de apresentação](https://unbbr-my.sharepoint.com/:v:/g/personal/202023903_aluno_unb_br/EUaq5J5LDBBGsAZZHs92b8ABLK2GOVKYJ5htySekfuEDAg?e=pWbx7L)
+
+[Clique aqui para acessar o repositório no github](https://github.com/dev-brito/t2-pspd-2025_2)
+
+
 ## Visão Geral do Documento
 
 Este documento está organizado da seguinte forma:
