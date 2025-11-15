@@ -1976,7 +1976,8 @@ O projeto demonstra como o Spark pode ser utilizado em cenários práticos de an
 - **Laís Ramos Barbosa:** No desenvolvimento do trabalho atuei nos testes relativos às configurações do Hadoop e auxiliando nas configurações gerais do Ambiente Spark e Kafka. Pra mim foi muito enriquecedor aprender a configurar e aplicar essas tecnologias, visto que sõa tecnologias amplamente usadas no mercado. Já havia usado o Apache Kafka no trabalho, mas os outros frameworks foram a primeira vez. Foi desafiador, mas o grupo soube dividir bem as tarefas e sempre que um integrante tinha dúvidas, o outro estava disponível para auxiliar. 
   **Nota:  10/10**.
 - **Ana Luíza Rodrigues:** 
-  **Nota:  /10**
+Durante o desenvolvimento do trabalho fui responsável pela montagem do cluster Hadoop utilizando Docker Compose. Enfrentei dificuldades na execução de scripts Python via Hadoop Streaming, pois as imagens Docker não possuíam Python3 instalado e os repositórios Debian Stretch estavam descontinuados. Esse laboratório foi muito enriquecedor pois nunca tinha utilizado o Hadoop nem o Apache Kafka. Tive dificuldade em utilizar os frameworks, mas a integração do grupo no desenvolvimento ajudou bastante.
+  **Nota:  10/10**
 - **Guilherme Brito:**  
   **Nota:  /10**
 - **Matheus Raphael Soares de Oliveira:**  
