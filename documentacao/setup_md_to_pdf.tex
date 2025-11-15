@@ -1,0 +1,30 @@
+% Carrega o pacote de cores, que deve vir ANTES do listings
+\usepackage{xcolor}
+
+\usepackage{microtype}
+
+% Carrega o pacote de listings (ESSA LINHA ESTAVA FALTANDO)
+\usepackage{listings}
+
+% Agora sim, você pode configurar o pacote
+\lstset{
+    basicstyle=\ttfamily,
+    numbers=left,
+    keywordstyle=\color[rgb]{0.13,0.29,0.53}\bfseries,
+    stringstyle=\color[rgb]{0.31,0.60,0.02},
+    commentstyle=\color[rgb]{0.56,0.35,0.01}\itshape,
+    numberstyle=\footnotesize,
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color[RGB]{248,248,248},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,         % <-- MANTENHA ESTA LINHA
+    breakautoindent=true,
+    escapeinside={\%*}{*)},
+    linewidth=\textwidth,    % <-- Veja a dica bônus abaixo
+    basewidth=0.5em,
+}
