@@ -1834,7 +1834,7 @@ Este projeto implementa um pipeline de análise de sentimentos em tempo real uti
 - **Docker Desktop** instalado e rodando
 - **Docker Compose** (incluído no Docker Desktop)
 - Mínimo **4GB de RAM** disponível para o Docker
-- Portas disponíveis: 8888, 5601, 9200, 9092, 7077, 8080
+- Portas disponíveis: 8888, 5601, 9200, 9092, 7077, 8080, 2181
 
 ### Primeira Execução - Passo a Passo Detalhado
 
@@ -1968,6 +1968,16 @@ O projeto demonstra como o Spark pode ser utilizado em cenários práticos de an
 
 ### Dificuldades encontradas
 
+
+Uma das primeiras dificuldades encontradas foi conseguir alterar a fonte de dados para o input_topic de modo a utilizar alguma rede social. Primeiro, tentei integrar um bot do Discord, mas não consegui fazê-lo enviar mensagens de forma consistente para o Kafka. Em seguida, tentei utilizar a API/web do X (Twitter), porém fui impedido por bloqueios e restrições do próprio site. Por fim, recorri ao old.reddit, que também apresentou obstáculos — principalmente bloqueios de acesso (403) e necessidade de adaptar o scraper ao HTML irregular e às limitações impostas pelo site.
+
+
+Outra dificuldade foi ao tentar realizar todo o pipeline pelo próprio Google Colab, o que se mostrou altamente difícil, senão impossível. Portanto, foi necessário containerizar a solução, deixando apenas a parte do processamento dos dados vindos da fila pelo Spark Streaming dentro de um notebook, que, em seguida, envia os dados para outra fila do Kafka.
+
+
+Depois que o scraper começou a funcionar e alimentar o input_topic, enfrentei uma sequência de dificuldades técnicas profundas ao tentar integrar o Spark Structured Streaming 4.0.1 com o Kafka. Primeiro, a resolução automática de dependências com .config("spark.jars.packages", ...) falhava porque as versões mais novas do Kafka não possuem compatibilidade binária com Spark 4.0.1, resultando em erros como NoClassDefFoundError e JavaGatewayExited. Tentei diversas combinações de jars no Dockerfile, mas isso gerou novos conflitos, como ausência de classes (GenericKeyedObjectPoolConfig) ou métodos (setMinEvictableIdleDuration()). Isso levou a uma série de erros silenciosos, micro-batches abortados e ausência de mensagens no output_topic até que, finalmente, após retornar ao método de config diretamente no notebook, todas as dependências foram alinhadas. Somado aos problemas de checkpoint, offsets antigos e comportamento do Spark com topics vazios, o processo exigiu inúmeras reconstruções de containers e ajustes finos para estabilizar todo o pipeline.
+
+
 # Conclusão
 
 ## Autoavaliação
@@ -1979,5 +1989,5 @@ O projeto demonstra como o Spark pode ser utilizado em cenários práticos de an
   **Nota:  /10**
 - **Guilherme Brito:**  
   **Nota:  /10**
-- **Matheus Raphael Soares de Oliveira:**  
+- **Matheus Raphael Soares de Oliveira:** No desenvolvimento do trabalho atuei principalmente na parte de configuração do Kafka, nos tópicos de input e output, programando o scraper do Reddit, assim como nas configurações e análise de sentimentos do Spark Streaming. No Hadoop, auxiliei nas configurações gerais junto com meus outros colegas. Aprendi muito sobre Kafka e Spark na execução desse trabalho, além de afinar meus conhecimentos sobre Docker e Docker compose. Consegui perceber que o Spark é uma tecnologia que facilita bastante o processamento de dados de streaming, possibilitando análise em tempo real de grandes volumes de dados. Foi desafiador, encontrei bastante erros, mas no final, com a ajuda do grupo, conseguimos deixar essa pipeline de análise de dados em fila funcionando.
    **Nota:  /10**
