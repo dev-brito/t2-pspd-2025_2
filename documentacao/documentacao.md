@@ -1969,3 +1969,15 @@ O projeto demonstra como o Spark pode ser utilizado em cenários práticos de an
 ### Dificuldades encontradas
 
 # Conclusão
+
+## Autoavaliação
+
+- **Lucas Lopes Rocha:**  **Nota:  /10**.
+- **Laís Ramos Barbosa:** No desenvolvimento do trabalho atuei nos testes relativos às configurações do Hadoop e auxiliando nas configurações gerais do Ambiente Spark e Kafka. Pra mim foi muito enriquecedor aprender a configurar e aplicar essas tecnologias, visto que sõa tecnologias amplamente usadas no mercado. Já havia usado o Apache Kafka no trabalho, mas os outros frameworks foram a primeira vez. Foi desafiador, mas o grupo soube dividir bem as tarefas e sempre que um integrante tinha dúvidas, o outro estava disponível para auxiliar. 
+  **Nota:  10/10**.
+- **Ana Luíza Rodrigues:** 
+  **Nota:  /10**
+- **Guilherme Brito:**  
+  **Nota:  /10**
+- **Matheus Raphael Soares de Oliveira:**  
+   **Nota:  /10**
