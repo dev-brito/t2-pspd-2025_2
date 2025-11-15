@@ -1982,3 +1982,4 @@ Durante o desenvolvimento do trabalho fui responsável pela montagem do cluster 
   **Nota:  /10**
 - **Matheus Raphael Soares de Oliveira:**  
    **Nota:  /10**
+- **Guilherme Brito Vilas Boas:** Neste trabalho, minha atuação principal concentrou-se no estudo e implementação de testes de performance e tolerância a falhas no framework Hadoop. A fase inicial foi desafiadora, pois a montagem do cluster em Docker exigiu a identificação e alteração de uma configuração específica, o que demandou alguns dias de análise. Ao final, foi gratificante comprovar a resiliência do Hadoop, que manteve a execução dos jobs com sucesso mesmo com a perda de nodes.
