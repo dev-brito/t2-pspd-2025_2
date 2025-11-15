@@ -37,7 +37,7 @@ RUN curl -fsSL https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spar
 ENV SPARK_HOME=/opt/spark
 ENV PATH="$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
 
-RUN pip install --no-cache-dir jupyterlab pyspark==4.0.1 vaderSentiment
+RUN pip install --no-cache-dir jupyterlab pyspark==4.0.1 vaderSentiment requests
 
 COPY . .
 

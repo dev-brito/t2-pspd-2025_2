@@ -1603,4 +1603,369 @@ Em suma, os experimentos validam o design do Hadoop: o acréscimo de nós melhor
 
 # Conhecendo o Apache Spark
 
+## Visão Geral da Implementação
+
+Este projeto implementa um pipeline de análise de sentimentos em tempo real utilizando Apache Spark Streaming, processando dados coletados do Reddit. A solução integra múltiplas tecnologias de Big Data para criar um sistema de streaming com visualização interativa dos resultados.
+
+## Componentes e Tecnologias
+
+### 1. Apache Spark Streaming
+
+**Versão**: 4.0.1
+
+**Função**: Processa streams de dados em tempo real, aplicando análise de sentimentos em comentários do Reddit.
+
+**Configurações**:
+- Modo: Local com todos os cores disponíveis (`local[*]`)
+- Partições de shuffle: 2 (otimizado para ambiente local)
+- Integração com Kafka via `spark-sql-kafka-0-10`
+
+**Processamento**:
+- Leitura contínua do tópico Kafka `input_topic`
+- Parsing de JSON com schema definido
+- Aplicação de UDF (User Defined Function) para análise de sentimentos
+- Escrita dos resultados no tópico `output_topic`
+
+### 2. Apache Kafka
+
+**Versão**: 7.5.0 (Confluent Platform)
+
+**Função**: Message broker para streaming de dados entre componentes.
+
+**Tópicos**:
+- `input_topic`: Recebe dados brutos do Reddit scraper
+- `output_topic`: Recebe dados processados com análise de sentimentos
+
+**Configuração**:
+- Bootstrap server: `kafka:9092`
+- Auto-criação de tópicos habilitada
+- Replication factor: 1 (ambiente de desenvolvimento)
+
+### 3. Reddit Scraper
+
+**Tecnologia**: Python 3.11 com BeautifulSoup4
+
+**Rede Social**: Reddit (subreddit /r/news)
+
+**Função**: Coleta automatizada de posts e comentários.
+
+**Dados Coletados**:
+- Título do post (`post_title`)
+- Texto do post (`post_text`)
+- Comentários (`comment`)
+
+**Estratégia de Coleta**:
+- Scraping da versão old.reddit.com (HTML mais simples)
+- Intervalo aleatório entre requisições (10-40 segundos)
+- Headers customizados para evitar bloqueios
+- Envio direto para Kafka após coleta
+
+### 4. Análise de Sentimentos (VADER)
+
+**Biblioteca**: vaderSentiment
+
+**Método**: VADER (Valence Aware Dictionary and sEntiment Reasoner)
+
+**Características**:
+- Otimizado para textos de redes sociais
+- Não requer treinamento prévio
+- Considera emojis, pontuação e intensificadores
+- Retorna 4 scores:
+  - `neg`: Score negativo (0.0 a 1.0)
+  - `neu`: Score neutro (0.0 a 1.0)
+  - `pos`: Score positivo (0.0 a 1.0)
+  - `compound`: Score composto (-1.0 a +1.0)
+
+**Classificação**:
+- **Positivo**: compound ≥ 0.05
+- **Negativo**: compound ≤ -0.05
+- **Neutro**: -0.05 < compound < 0.05
+
+### 5. ElasticSearch
+
+**Versão**: 8.11.0
+
+**Função**: Search engine para armazenamento, indexação e busca rápida dos dados processados.
+
+**Índice**: `reddit-sentiment`
+
+**Estrutura dos Documentos**:
+```json
+{
+  "post_title": "Título do post",
+  "post_text": "Texto completo do post",
+  "comment": "Comentário analisado",
+  "sentiment": {
+    "neg": 0.0,
+    "neu": 0.8,
+    "pos": 0.2,
+    "compound": 0.5
+  },
+  "sentiment_label": "positive",
+  "keywords": ["palavra1", "palavra2", "palavra3"],
+  "timestamp": "2025-11-15T12:00:00.000Z"
+}
+```
+
+### 6. Consumer Kafka-to-ElasticSearch
+
+**Tecnologia**: Python 3.11
+
+**Função**: Consome mensagens do Kafka e indexa no ElasticSearch, adicionando processamento extra.
+
+**Processamento Adicional**:
+
+1. **Extração de Keywords**:
+   - Tokenização do texto (títulos + comentários)
+   - Remoção de stopwords em inglês
+   - Filtro por tamanho mínimo (4 caracteres)
+   - Seleção das top 20 palavras mais frequentes
+
+2. **Classificação de Sentimento**:
+   - Conversão do compound score em label categórico
+   - Adição de timestamp UTC
+
+3. **Indexação**:
+   - Envio para ElasticSearch via API REST
+   - Criação automática do índice com mapping apropriado
+
+### 7. Kibana
+
+**Versão**: 8.11.0
+
+**Função**: Interface de visualização e criação de dashboards interativos.
+
+**Porta**: 5601
+
+**Data View**: `reddit-sentiment` (índice do ElasticSearch)
+
+## Visualizações Implementadas
+
+### 1. Nuvem de Palavras (Tag Cloud)
+
+**Tipo**: Tag Cloud
+
+**Objetivo**: Visualizar as palavras mais frequentes nos comentários.
+
+**Configuração**:
+- Campo: `keywords`
+- Size: Top 100 palavras
+- Tamanho proporcional à frequência
+
+**Variações**:
+- Nuvem geral (todas as palavras)
+- Nuvem de palavras positivas (filtro: `sentiment_label = positive`)
+- Nuvem de palavras negativas (filtro: `sentiment_label = negative`)
+
+**Insights**: Identifica os tópicos mais discutidos e as palavras associadas a cada sentimento.
+
+![Visualização - Nuvem de Palavras](img/kibana-word-cloud-view.png)
+
+### 2. Distribuição de Sentimentos (Gráfico de Pizza)
+
+**Tipo**: Pie Chart
+
+**Objetivo**: Mostrar a proporção de comentários positivos, negativos e neutros.
+
+**Configuração**:
+- Agregação: Terms
+- Campo: `sentiment_label.keyword`
+- Visualização: 3 fatias coloridas (verde/vermelho/cinza)
+
+**Insights**: Permite identificar rapidamente o tom geral das discussões no Reddit.
+
+![Visualização - Distribuição de Sentimentos](img/kibana-pie-view.png)
+
+### 3. Contador de Palavras (Gráfico de Barras Horizontal)
+
+**Tipo**: Horizontal Bar Chart
+
+**Objetivo**: Exibir as palavras mais frequentes em ordem decrescente de ocorrência.
+
+**Configuração**:
+- Eixo Y: `keywords` (Terms aggregation)
+- Eixo X: Count (contagem de ocorrências)
+- Size: Top 20 palavras
+- Order by: Metric: Count
+- Order: Descending
+
+**Insights**: Identifica rapidamente os termos mais discutidos nos comentários do Reddit, permitindo análise de tópicos em destaque. Diferente da nuvem de palavras, apresenta valores numéricos exatos de frequência.
+
+![Visualização - Contador de Palavras](img/kibana-horizontal-view.png)
+
+### 4. Sentimentos ao Longo do Tempo (Gráfico de Barras)
+
+**Tipo**: Vertical Bar Chart
+
+**Objetivo**: Analisar a evolução temporal dos sentimentos.
+
+**Configuração**:
+- Eixo X: `timestamp` (Date Histogram)
+- Eixo Y: Count
+- Breakdown: `sentiment_label.keyword`
+- Visualização: Barras empilhadas por sentimento
+
+**Insights**: Identifica padrões temporais, picos de sentimentos negativos/positivos relacionados a eventos específicos.
+
+![Visualização - Sentimentos ao Longo do Tempo](img/kibana-vertical-view.png)
+
+### 5. Dashboard Completo
+
+**Nome**: Reddit Sentiment Dashboard
+
+**Componentes**:
+- Todas as visualizações acima organizadas em um layout responsivo
+- Filtros interativos por período de tempo
+- Busca por palavras-chave
+- Auto-refresh configurável
+
+**Funcionalidades**:
+- Drill-down: Clicar em elementos para filtrar dados
+- Time range: Ajustar período de análise
+- Export: Exportar dados e visualizações
+- Share: Compartilhar dashboard via URL
+
+![Kibana Dashboard](img/kibana-dashboard.png)
+
+## Como Executar a Aplicação
+
+### Pré-requisitos
+
+- **Docker Desktop** instalado e rodando
+- **Docker Compose** (incluído no Docker Desktop)
+- Mínimo **4GB de RAM** disponível para o Docker
+- Portas disponíveis: 8888, 5601, 9200, 9092, 7077, 8080
+
+### Primeira Execução - Passo a Passo Detalhado
+
+#### 1. Clonar o Repositório
+
+```bash
+git clone https://github.com/dev-brito/t2-pspd-2025_2.git
+cd spark
+```
+
+#### 2. Iniciar Todos os Serviços
+
+```bash
+docker compose up --build
+```
+
+**O que acontece**:
+- Download das imagens Docker (a primeira vez demorará alguns minutos)
+- Build das imagens customizadas (Spark, Scraper, Consumer)
+- Inicialização dos containers na ordem correta:
+  1. Zookeeper
+  2. Kafka
+  3. ElasticSearch
+  4. Spark Master e Worker
+  5. Kibana
+  6. Jupyter Notebook (Spark)
+  7. Reddit Scraper
+  8. Consumer Kafka-to-ElasticSearch
+
+**Verificar se está rodando**:
+```bash
+docker ps
+```
+
+Você deve ver 8 containers rodando.
+
+#### 3. Acessar o Jupyter Notebook
+
+**URL**: http://localhost:8888
+
+**Obter Token de Autenticação**:
+
+Entre nos logs do container `spark-notebook` e procure por `http://127.0.0.1:8888/lab?token=`
+
+Copie o token e cole na página de login, ou use a URL completa com token.
+
+**Abrir o Notebook**:
+Navegue até `spark_notebook.ipynb`
+
+#### 4. Executar o Processamento Spark
+
+No Jupyter Notebook, execute as células em ordem, exceto a última.
+
+**Resultado**: O Spark Streaming começa a processar dados continuamente.
+
+#### 5. Verificar Dados no ElasticSearch
+
+Aguarde 2-3 minutos para dados serem coletados e processados.
+
+**Verificar contagem de documentos**:
+```bash
+curl http://localhost:9200/reddit-sentiment/_count
+```
+
+**Resultado esperado**:
+```json
+{"count":50,"_shards":{"total":1,"successful":1,"skipped":0,"failed":0}}
+```
+
+**Buscar documentos de exemplo**:
+```bash
+curl http://localhost:9200/reddit-sentiment/_search?size=3&pretty
+```
+
+#### 6. Configurar Kibana
+
+**Acessar Kibana**: http://localhost:5601
+
+##### Importar Data View e Visualizações
+
+Para facilitar a configuração, o projeto inclui um arquivo com todas as visualizações pré-configuradas.
+
+**Passos para Importação**:
+
+1. **Acessar Stack Management**:
+   - Menu lateral → **Management** → **Stack Management**
+
+2. **Navegar até Saved Objects**:
+   - No menu lateral de Stack Management → Seção **Kibana** → **Saved Objects**
+
+3. **Importar o arquivo**:
+   - Clique em **Import**
+   - Faça upload do arquivo `spark/kibana-export.ndjson`
+   - Clique em **Import** para confirmar
+
+4. **Acessar o Dashboard**:
+   - Após a importação, clique em **Reddit Sentiment Dashboard**
+   - Todas as visualizações estarão configuradas e prontas para uso
+
+
+### Execuções Subsequentes
+
+Após a primeira configuração, para executar novamente:
+
+```bash
+# Iniciar containers
+docker compose up -d
+
+# Acessar Jupyter e executar células do notebook
+# URL: http://localhost:8888
+
+# Acessar Kibana (visualizações já estarão salvas)
+# URL: http://localhost:5601
+```
+
+### Parar a Aplicação
+
+```bash
+# Parar containers
+docker compose down
+
+# Parar e remover volumes (limpar dados)
+docker compose down -v
+```
+
+## Conclusão sobre o Uso do Spark
+
+O Apache Spark demonstrou ser a ferramenta ideal para este projeto de análise de sentimentos em tempo real. Sua capacidade de processar streams de dados com baixa latência, combinada com uma API de alto nível e integração nativa com Kafka e ElasticSearch, permitiu criar um pipeline completo e funcional com código conciso e manutenível.
+
+O projeto demonstra como o Spark pode ser utilizado em cenários práticos de análise de dados de redes sociais, fornecendo insights valiosos através de visualizações interativas no Kibana. A arquitetura implementada é robusta, escalável e serve como base sólida para expansões futuras, como análise de múltiplas redes sociais, modelos de machine learning mais sofisticados, ou processamento de volumes massivos de dados em ambiente de produção.
+
+### Dificuldades encontradas
+
 # Conclusão

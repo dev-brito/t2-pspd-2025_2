@@ -1,0 +1,14 @@
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY kafka_to_elasticsearch.py .
+
+RUN pip install --no-cache-dir kafka-python elasticsearch==8.11.0
+
+CMD ["python", "kafka_to_elasticsearch.py"]
+
